@@ -3,3 +3,4 @@ zip
 .env
 .development.json
 .package.json
+.txt
