@@ -8,6 +8,10 @@ const regiesterUser = async (req, res) => {
     try {
       /// decomposing data
       let { fullName, email, password, contact } = req.body;
+      // Prevent users from assigning themselves as admin
+      if (role === "admin") {
+        return res.status(403).send("You cannot register as an admin");
+      }
       /// chechk if any data is null
       if (!fullName || !email || !password || !contact) {
         return res.status(204).send("All fields are required");
@@ -46,21 +50,41 @@ const regiesterUser = async (req, res) => {
 
 ////////////////////////////////////////////////////
   // Login User
-const loginUser = async (req, res) => {
-  const { email, password } = req.body;
-  const user = await userModel.findOne({ email });
-
-  if (user && (await bcrypt.compare(password, user.password))) {
-      res.json({ 
-          _id: user._id,
-          name: user.name,
-          email: user.email,
-          role: user.role,
-          token: generateToken(user._id)
+  const loginUser = async (req, res) => {
+    try {
+      const { fullName, email, password } = req.body;
+  
+      // Find user by email
+      const user = await userModel.findOne({ email });
+      if (!user) return res.status(401).json({ message: "Invalid email or password" });
+  
+      // Check password
+      const isMatch = await bcrypt.compare(password, user.password);
+      if (!isMatch) return res.status(401).json({ message: "Invalid email or password" });
+  
+      // Generate JWT token
+      const token = generateToken(user._id, user.role);
+  
+      // Set HTTP-only cookie
+      res.cookie("authToken", token, {
+        httpOnly: true, // Prevents JavaScript access
+        secure: true, // Ensures it's sent over HTTPS (enable in production)
+        sameSite: "Strict", // Prevents CSRF attacks
+        maxAge: 7 * 24 * 60 * 60 * 1000, // Expires in 7 days
       });
-  } else {
-      res.status(401).json({ message: "Invalid email or password" });
-  }
+  
+      res.status(200).json({ message: "Login successful" });
+    } catch (error) {
+      res.status(500).json({ message: "Server error" });
+    }
+  };
+
+
+/////////////////////////////////////
+//// log out /////////////////////
+const logoutUser = (req, res) => {
+  res.cookie("authToken", "", { httpOnly: true, expires: new Date(0) });
+  res.status(200).json({ message: "Logged out successfully" });
 };
 
 
@@ -71,4 +95,4 @@ const getUserProfile = async (req, res) => {
 };
 
 
-module.exports = {regiesterUser, loginUser, getUserProfile };
+module.exports = {regiesterUser, loginUser, getUserProfile, logoutUser };

@@ -4,7 +4,7 @@ const { protect, admin } = require("../middleware/auth-middleware");
 const { getAllUsers, deleteUser } = require("../controllers/adminController");
 
 
-router.get("/users", protect, admin, getAllUsers);
+router.get("/get-all-users", protect, admin, getAllUsers);
 router.delete("/user/:id", protect, admin, deleteUser);
 
 
